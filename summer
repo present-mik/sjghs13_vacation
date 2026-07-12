@@ -81,7 +81,7 @@
   </form>
 
   <script>
-    const ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbySA1uSFaK7-rtWulX3sKwHGsZDbG666dUO2CsZs4p6jmuwvZQb01SKy6Ez69LBf_7G/exec";
+    const ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbwZETGC5u35oLJLr5EjbR9qeGLju63OVurWN1Mjpk-5FotmpNSCAtxLTzvODOKWroTy/exec";
 
     const NEED_REASON = new Set([
       "모둠학습실", "시청각실", "한우리관(강당)", "어학실", "과학실",
