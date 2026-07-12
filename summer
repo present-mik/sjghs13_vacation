@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>2학년 자습 장소 선택</title>
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      max-width: 820px;
+      margin: 24px auto;
+      padding: 0 16px;
+    }
+    h1 {
+      font-size: 22px;
+      margin: 0 0 20px;
+      text-align: center;
+    }
+    label {
+      display:block;
+      margin: 14px 0 6px;
+      font-weight: 600;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    .hint {
+      color:#666;
+      font-size: 13px;
+      margin-top: 6px;
+    }
+    .row {
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .card {
+      border: 1px solid #e5e5e5;
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 14px;
+    }
+    .period-title {
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .hidden { display:none; }
+    button {
+      margin-top: 20px;
+      cursor: pointer;
+    }
+    button[disabled] {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>2학년 자습 장소 선택</h1>
+
+  <form id="form">
+    <div class="row">
+      <div>
+        <label for="studentId">학번</label>
+        <input id="studentId" name="studentId" inputmode="numeric" placeholder="예: 2101" required maxlength="4" />
+      </div>
+      <div>
+        <label for="name">이름</label>
+        <input id="name" name="name" placeholder="이름" required maxlength="3" />
+      </div>
+    </div>
+
+    <div id="period-container"></div>
+
+    <button id="submitBtn" type="submit">제출</button>
+  </form>
+
+  <script>
+    const ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbySA1uSFaK7-rtWulX3sKwHGsZDbG666dUO2CsZs4p6jmuwvZQb01SKy6Ez69LBf_7G/exec";
+
+    const NEED_REASON = new Set([
+      "모둠학습실", "시청각실", "한우리관(강당)", "어학실", "과학실",
+      "무한상상실", "강의실1", "지성의 계단", "기타"
+    ]);
+
+    const form = document.getElementById("form");
+    const submitBtn = document.getElementById("submitBtn");
+    const container = document.getElementById("period-container");
+    const periods = [1, 2, 3, 4, 5]; // 1차시부터 5차시까지
+
+    // 1~5차시 HTML 동적 생성 (요청하신 대로 구조는 그대로 유지)
+    periods.forEach(p => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <div class="period-title">${p}차시</div>
+        <label for="place${p}">자습 장소</label>
+        <select id="place${p}" name="place${p}" required>
+          <option value="">선택하세요</option>
+          <option>교실</option>
+          <option>아고라(교무실 옆)</option>
+          <option>아고라(3,4반 사이)</option>
+          <option>모둠학습실</option>
+          <option>시청각실</option>
+          <option>한우리관(강당)</option>
+          <option>어학실</option>
+          <option>과학실</option>
+          <option>무한상상실</option>
+          <option>강의실1</option>
+          <option>지성의 계단</option>
+          <option>외출</option>
+          <option>외박</option>
+          <option>기타</option>
+        </select>
+        <div id="reasonWrap${p}" class="hidden">
+          <label for="reason${p}">사유</label>
+          <input id="reason${p}" name="reason${p}" placeholder="예: 방과후, 2층 교무실(상담)" />
+          <div class="hint">해당 장소 선택 시 사유 입력이 필요합니다.</div>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+
+    function normalize(s) {
+      return (s || "").replace(/\s+/g, " ").trim();
+    }
+
+    function toggleReasonForPeriod(p) {
+      const placeEl = document.getElementById(`place${p}`);
+      const reasonWrap = document.getElementById(`reasonWrap${p}`);
+      const reasonEl = document.getElementById(`reason${p}`);
+      const place = normalize(placeEl.value);
+      const need = NEED_REASON.has(place);
+
+      reasonWrap.classList.toggle("hidden", !need);
+      reasonEl.required = need;
+      if (!need) reasonEl.value = "";
+    }
+
+    for (const p of periods) {
+      document.getElementById(`place${p}`).addEventListener("change", () => toggleReasonForPeriod(p));
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const rawId = document.getElementById("studentId").value;
+      const studentId = rawId.replace(/\D+/g, "").trim();
+      if (!/^\d{4}$/.test(studentId)) {
+        alert("학번은 숫자 4자리여야 합니다.");
+        return;
+      }
+
+      const rawName = document.getElementById("name").value;
+      const name = rawName.replace(/\s+/g, "").trim();
+      if (name.length !== 3) {
+        alert("이름은 공백 제외 정확히 세 글자여야 합니다.");
+        return;
+      }
+
+      const payload = { studentId, name };
+
+      for (const p of periods) {
+        const place = normalize(document.getElementById(`place${p}`).value);
+        const reason = normalize(document.getElementById(`reason${p}`).value);
+
+        if (!place) {
+          alert(`${p}차시 자습 장소를 선택하세요.`);
+          return;
+        }
+        if (NEED_REASON.has(place) && !reason) {
+          alert(`${p}차시는 해당 장소 선택 시 사유를 입력해야 합니다.`);
+          return;
+        }
+        payload[`p${p}`] = NEED_REASON.has(place) ? `${place}(${reason})` : place;
+      }
+
+      const body = new URLSearchParams(payload);
+      submitBtn.disabled = true;
+      try {
+        await fetch(ENDPOINT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          body
+        });
+        alert("제출 완료");
+        form.reset();
+        for (const p of periods) toggleReasonForPeriod(p);
+      } catch (err) {
+        alert("전송 실패: 네트워크 상태를 확인하세요.");
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
+
+요청하신 1~5차시 변경이 완료되었습니다! 위 코드를 사용하시면 기존 로직 그대로 5개 항목을 수집할 수 있습니다. 도움이 필요하시면 언제든 말씀해 주세요.
